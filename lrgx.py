@@ -2,10 +2,11 @@ import argparse
 import curses
 import logging
 import re
+import sys
 
 
-logger = logging.getLogger('legex')
-handler = logging.FileHandler('legex.log')
+logger = logging.getLogger(__file__)
+handler = logging.FileHandler('lrgx.log')
 logger.addHandler(handler)
 logger.setLevel(logging.DEBUG)
 
@@ -22,9 +23,19 @@ class Scroller(object):
             regex = '(' + regex + ')'
             regex = re.compile(regex)
         self.regex = regex
+        self.key_to_color = {}
+        self.next_color = 0
+
+    def _assign_color(self, key):
+        color = self.next_color
+        self.next_color += 1
+        self.next_color %= 8
+        return color
 
     def _get_color(self, key):
-        return hash(key) % 8
+        if key not in self.key_to_color:
+            self.key_to_color[key] = self._assign_color(key)
+        return self.key_to_color[key]
 
     def _paint_line(self, line):
         if self.regex is not None:
@@ -103,6 +114,10 @@ def main(win, filename=None, regex=None):
             scroller.page_down()
         elif cmd == curses.KEY_PPAGE:
             scroller.page_up()
+        elif cmd == curses.KEY_UP:
+            scroller.scroll_up(1)
+        elif cmd == curses.KEY_DOWN:
+            scroller.scroll_down(1)
         else:
             logger.debug('cmd={}'.format(cmd))
             scroller.scroll_down(1)
@@ -113,5 +128,8 @@ if __name__ == "__main__":
     parser.add_argument('file', help='File to view')
     parser.add_argument('--regex', help='Regular expression to match')
     args = parser.parse_args()
-
-    curses.wrapper(main, filename=args.file, regex=args.regex)
+    
+    try:
+        curses.wrapper(main, filename=args.file, regex=args.regex)
+    except:
+        logger.exception('Something bad happened')
