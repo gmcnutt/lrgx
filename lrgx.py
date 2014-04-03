@@ -126,7 +126,7 @@ def main(win, stream=None, regex=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="File viewer with regexp colorizing")
-    parser.add_argument('--file', help='File to view')
+    parser.add_argument('file', help='File to view', nargs='?')
     parser.add_argument('--regex', help='Regular expression to match')
     args = parser.parse_args()
 
