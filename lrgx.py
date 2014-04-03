@@ -1,6 +1,7 @@
 import argparse
 import curses
 import logging
+import os
 import re
 import sys
 
@@ -88,7 +89,7 @@ class Scroller(object):
         self.scroll_up(self.maxy)
 
 
-def main(win, filename=None, regex=None):
+def main(win, stream=None, regex=None):
     curses.noecho()
     curses.cbreak()
     win.keypad(1)
@@ -99,7 +100,7 @@ def main(win, filename=None, regex=None):
     logger.debug('COLOR_PAIRS={}'.format(curses.COLOR_PAIRS))
     logger.debug('COLORS={}'.format(curses.COLORS))
 
-    lines = open(filename).readlines()
+    lines = stream.readlines()
 
     scroller = Scroller(win, lines, regex=regex)
 
@@ -125,11 +126,21 @@ def main(win, filename=None, regex=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="File viewer with regexp colorizing")
-    parser.add_argument('file', help='File to view')
+    parser.add_argument('--file', help='File to view')
     parser.add_argument('--regex', help='Regular expression to match')
     args = parser.parse_args()
+
+    if args.file:
+        stream = open(args.file)
+    else:
+        # stdin is the input. Clone it to another file, close it, then dup it
+        # from stderr so we can get a tty for curses input (saw this trick in
+        # the source code for 'less')
+        stream = os.fdopen(os.dup(sys.stdin.fileno()))
+        os.close(sys.stdin.fileno())
+        sys.stdin = os.fdopen(os.dup(2))
     
     try:
-        curses.wrapper(main, filename=args.file, regex=args.regex)
+        curses.wrapper(main, stream=stream, regex=args.regex)
     except:
         logger.exception('Something bad happened')
